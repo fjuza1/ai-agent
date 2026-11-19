@@ -3,7 +3,7 @@ import { currentUser } from "../../lib/auth";
 import { quotaDay } from "../../lib/quota";
 import { db } from "../../lib/db";
 import { buyCredits } from "../actions";
-import OverageModal from "../../components/OverageModal";
+import OverageModal from "../../components/commerce/OverageModal";
 
 export function generateMetadata() {
   return { title: "Sticker credits | Sticker Vault", description: "Add credits for additional sticker activity.", robots: { index: false, follow: false } };

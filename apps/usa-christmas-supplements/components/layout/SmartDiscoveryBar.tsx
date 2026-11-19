@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
-import { fold, matchesItem, suggest, type DiscoveryItem, type Suggestion } from "../lib/discovery.ts";
+import { fold, matchesItem, suggest, type DiscoveryItem, type Suggestion } from "../../lib/discovery.ts";
 
 export type DiscoveryEntry = DiscoveryItem & { card: ReactNode };
 

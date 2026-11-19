@@ -1,6 +1,6 @@
 import { signup } from "../auth-actions";
 import { magicLinkEnabled } from "../../lib/auth";
-import FavoritePills from "../../components/FavoritePills";
+import FavoritePills from "../../components/engagement/FavoritePills";
 import { pageMetadata, siteOrigin } from "../../../../packages/seo";
 
 export function generateMetadata() {

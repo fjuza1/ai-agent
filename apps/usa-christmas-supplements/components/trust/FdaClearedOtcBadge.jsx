@@ -1,4 +1,4 @@
-export default function FdaBadge({ product }) {
+export default function FdaClearedOtcBadge({ product }) {
   if (!product.fda_cleared_otc) return null;
   return <details className="mt-3 text-sm">
     <summary className="font-bold cursor-pointer">FDA-Cleared OTC Medical Device · {product.fda_device_name}</summary>

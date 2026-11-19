@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUser } from "../../../lib/auth";
 import { db } from "../../../lib/db";
 import { stickerById, stickers } from "../../../lib/stickers";
-import ShareSticker from "../../../components/ShareSticker";
+import ShareSticker from "../../../components/engagement/ShareSticker";
 
 export function generateMetadata() {
   return { title: "Save your sticker | Sticker Vault", description: "Save or share your sticker PNG.", robots: { index: false, follow: false } };

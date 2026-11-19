@@ -1,4 +1,4 @@
-import { categoryPill, isFavoriteCategory, parseCategories, type FavoriteCategory } from "../lib/categories.ts";
+import { categoryPill, isFavoriteCategory, parseCategories, type FavoriteCategory } from "../../lib/categories.ts";
 
 export type SavedProduct = { category: string; name?: string };
 export type FavoritesState = {

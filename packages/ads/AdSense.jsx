@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const AdContext = createContext({ enabled: false });
 
-export function AdProvider({ clientId, slotId, children }) {
+export function AdProvider({ clientId, slotId, children, externalConsentUi = false }) {
   const [consent, setConsent] = useState(false);
   const [decided, setDecided] = useState(false);
   useEffect(() => {
@@ -12,6 +12,12 @@ export function AdProvider({ clientId, slotId, children }) {
     setConsent(stored === "yes");
     setDecided(stored !== null);
   }, []);
+  useEffect(() => {
+    if (!externalConsentUi) return;
+    const sync = () => { const stored = localStorage.getItem("ad-consent"); setConsent(stored === "yes"); setDecided(stored !== null); };
+    window.addEventListener("ad-consent-change", sync);
+    return () => window.removeEventListener("ad-consent-change", sync);
+  }, [externalConsentUi]);
   const enabled = consent && /^ca-pub-\d{16}$/.test(clientId || "") && /^\d+$/.test(slotId || "");
   useEffect(() => {
     if (!enabled) return;
@@ -36,11 +42,11 @@ export function AdProvider({ clientId, slotId, children }) {
   }
   return <AdContext.Provider value={{ enabled, clientId, slotId }}>
     {children}
-    {!decided && <div role="dialog" aria-label="Advertising consent" className="fixed bottom-0 inset-x-0 z-50 bg-white border-t p-4 shadow-lg">
+    {!externalConsentUi && !decided && <div role="dialog" aria-label="Advertising consent" className="fixed bottom-0 inset-x-0 z-50 bg-white border-t p-4 shadow-lg">
       <p>Allow advertising cookies? This is a consent stub, not a certified regional consent platform.</p>
       <div className="flex gap-2 mt-2"><button onClick={() => choose(true)}>Allow</button><button onClick={() => choose(false)}>Decline</button></div>
     </div>}
-    {decided && <button className="fixed bottom-2 right-2 text-xs" onClick={() => { localStorage.removeItem("ad-consent"); setConsent(false); setDecided(false); }}>Ad settings</button>}
+    {!externalConsentUi && decided && <button className="fixed bottom-2 right-2 text-xs" onClick={() => { localStorage.removeItem("ad-consent"); setConsent(false); setDecided(false); }}>Ad settings</button>}
   </AdContext.Provider>;
 }
 

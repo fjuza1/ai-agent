@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { stickerById } from "../../../lib/stickers";
-import ProductContactForm from "../../../components/ProductContactForm";
+import ProductContactForm from "../../../components/engagement/ProductContactForm";
 import { pageMetadata, siteOrigin, structuredData } from "../../../../../packages/seo";
 
 export async function generateMetadata({ params }) {
