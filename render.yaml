@@ -1,0 +1,74 @@
+services:
+  - type: web
+    name: sticker-market
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build -w sticker-market
+    startCommand: if [ ! -f /var/data/sticker.db ]; then npm run db:push -w sticker-market; fi && cd apps/sticker-market && npx next start --hostname 0.0.0.0 --port "$PORT"
+    healthCheckPath: /
+    disk:
+      name: sticker-market-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.19.0
+      - key: DATABASE_URL
+        value: "file:/var/data/sticker.db?connection_limit=1&socket_timeout=10"
+      - key: STICKER_APP_URL
+        value: https://sticker-market.onrender.com
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: GIFT_EMAIL_FROM
+        sync: false
+      - key: GIFT_UNSUBSCRIBE_SECRET
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: SENDGRID_SUPPORT_TO_EMAIL
+        sync: false
+      - key: SENDGRID_IP_POOL
+        sync: false
+
+  - type: web
+    name: usa-christmas-supplements
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build -w usa-christmas-supplements
+    startCommand: if [ ! -f /var/data/supplements.db ]; then npm run db:push -w usa-christmas-supplements; fi && cd apps/usa-christmas-supplements && npx next start --hostname 0.0.0.0 --port "$PORT"
+    healthCheckPath: /
+    disk:
+      name: supplement-store-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22.19.0
+      - key: DATABASE_URL
+        value: "file:/var/data/supplements.db?connection_limit=1&socket_timeout=10"
+      - key: SUPPLEMENT_APP_URL
+        value: https://usa-christmas-supplements.onrender.com
+      - key: AUTH_URL
+        value: https://usa-christmas-supplements.onrender.com
+      - key: AUTH_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: SENDGRID_SUPPORT_TO_EMAIL
+        sync: false
+      - key: SENDGRID_IP_POOL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: AFFILIATE_CLICK_LOG
+        value: /var/data/affiliate_clicks.jsonl

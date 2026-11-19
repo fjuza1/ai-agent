@@ -54,6 +54,25 @@ upgraded app; check the migration on a copy first. A new development database
 can instead be created with `npm run db:push`. Existing pre-upgrade pending
 pack payments are fulfilled as legacy orders without a retroactive quota debit.
 
+## Deploy both apps to Render
+
+The root `render.yaml` defines two independent Node web services, each with its
+own persistent disk and SQLite database. In Render, create a Blueprint from this
+repository and apply the `render.yaml` configuration. Persistent disks require
+paid web services; the starter plan and 1 GB disk are initial settings, not a
+production capacity recommendation. Keep each SQLite database on its service's
+disk and run only one instance per service.
+
+Set the `sync: false` variables in each service's Render dashboard before
+launching features that need them. Add Stripe keys and configure the sticker
+market's `/api/stripe/webhook` endpoint; add email provider credentials for
+email features. Set `AUTH_SECRET` to a strong random value for supplement-store
+authentication. Update `STICKER_APP_URL`, `SUPPLEMENT_APP_URL`, and `AUTH_URL`
+if Render assigns different public service URLs. Each service initializes its
+schema on first startup when its database file is absent; use reviewed
+migrations and backups for subsequent production schema changes. The apps are
+server-rendered and require a server-capable host; GitHub Pages cannot run them.
+
 ## Product inquiries
 
 Both product-detail pages offer a contact form. Configure `SENDGRID_API_KEY`,
