@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": [
+    "lib/themeValidator.ts",
+    "packages/rate-limit/rateLimit.ts",
+    "apps/usa-christmas-supplements/lib/usaFilter.ts",
+    "apps/usa-christmas-supplements/lib/hourlyProductRotator.ts",
+    "apps/usa-christmas-supplements/lib/delivery.ts",
+    "apps/usa-christmas-supplements/lib/discovery.ts",
+    "apps/usa-christmas-supplements/lib/dailyFeatured.ts",
+    "apps/usa-christmas-supplements/lib/categories.ts",
+    "apps/usa-christmas-supplements/lib/alerts.ts",
+    "apps/usa-christmas-supplements/lib/signing.ts"
+  ]
+}

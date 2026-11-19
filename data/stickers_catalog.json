@@ -1,0 +1,452 @@
+[
+  {
+    "id": "sticker-01",
+    "name": "Snow Glow",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-01.png",
+    "alt": "Snow Glow, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-02",
+    "name": "Festive Fox",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-02.png",
+    "alt": "Festive Fox, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-03",
+    "name": "Starry Night",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-03.png",
+    "alt": "Starry Night, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-04",
+    "name": "Winter Spark",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-04.png",
+    "alt": "Winter Spark, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-05",
+    "name": "Merry Light",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-05.png",
+    "alt": "Merry Light, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-06",
+    "name": "Candy Swirl",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-06.png",
+    "alt": "Candy Swirl, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-07",
+    "name": "Jolly Moon",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-07.png",
+    "alt": "Jolly Moon, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-08",
+    "name": "Cocoa Cloud",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-08.png",
+    "alt": "Cocoa Cloud, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-09",
+    "name": "Frost Pop",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-09.png",
+    "alt": "Frost Pop, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-10",
+    "name": "Sleigh Bell",
+    "theme": "Holiday",
+    "image": "/stickers/sticker-10.png",
+    "alt": "Sleigh Bell, an original Holiday collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-11",
+    "name": "Pixel Coin",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-11.png",
+    "alt": "Pixel Coin, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-12",
+    "name": "Moon Mood",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-12.png",
+    "alt": "Moon Mood, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-13",
+    "name": "Block Party",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-13.png",
+    "alt": "Block Party, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-14",
+    "name": "Rocket Wink",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-14.png",
+    "alt": "Rocket Wink, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-15",
+    "name": "Diamond Day",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-15.png",
+    "alt": "Diamond Day, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-16",
+    "name": "Happy Token",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-16.png",
+    "alt": "Happy Token, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-17",
+    "name": "Pixel Pals",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-17.png",
+    "alt": "Pixel Pals, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-18",
+    "name": "Rocket Club",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-18.png",
+    "alt": "Rocket Club, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-19",
+    "name": "Byte Bloom",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-19.png",
+    "alt": "Byte Bloom, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-20",
+    "name": "Bright Block",
+    "theme": "Crypto / Memes",
+    "image": "/stickers/sticker-20.png",
+    "alt": "Bright Block, an original Crypto / Memes collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-21",
+    "name": "Orbit Bloom",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-21.png",
+    "alt": "Orbit Bloom, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-22",
+    "name": "Galaxy Glow",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-22.png",
+    "alt": "Galaxy Glow, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-23",
+    "name": "Little Comet",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-23.png",
+    "alt": "Little Comet, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-24",
+    "name": "Star Drift",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-24.png",
+    "alt": "Star Drift, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-25",
+    "name": "Solar Smile",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-25.png",
+    "alt": "Solar Smile, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-26",
+    "name": "Lunar Wave",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-26.png",
+    "alt": "Lunar Wave, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-27",
+    "name": "Nebula Pop",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-27.png",
+    "alt": "Nebula Pop, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-28",
+    "name": "Astro Heart",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-28.png",
+    "alt": "Astro Heart, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-29",
+    "name": "Planet Party",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-29.png",
+    "alt": "Planet Party, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-30",
+    "name": "Cosmic Spark",
+    "theme": "Cosmic",
+    "image": "/stickers/sticker-30.png",
+    "alt": "Cosmic Spark, an original Cosmic collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-31",
+    "name": "Glow Cat",
+    "theme": "Neon Pets",
+    "image": "/stickers/sticker-31.png",
+    "alt": "Glow Cat, an original Neon Pets collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-32",
+    "name": "Electric Pup",
+    "theme": "Neon Pets",
+    "image": "/stickers/sticker-32.png",
+    "alt": "Electric Pup, an original Neon Pets collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-33",
+    "name": "Sunset Club",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-33.png",
+    "alt": "Sunset Club, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-34",
+    "name": "Good Vibes",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-34.png",
+    "alt": "Good Vibes, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-35",
+    "name": "Retro Wave",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-35.png",
+    "alt": "Retro Wave, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-36",
+    "name": "Lucky Day",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-36.png",
+    "alt": "Lucky Day, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-37",
+    "name": "Groovy Star",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-37.png",
+    "alt": "Groovy Star, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-38",
+    "name": "Sunny Side",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-38.png",
+    "alt": "Sunny Side, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-39",
+    "name": "Dream Team",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-39.png",
+    "alt": "Dream Team, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-40",
+    "name": "Happy Trail",
+    "theme": "Retro Badges",
+    "image": "/stickers/sticker-40.png",
+    "alt": "Happy Trail, an original Retro Badges collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-41",
+    "name": "Baby On Board",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-41.png",
+    "alt": "Baby On Board, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-42",
+    "name": "Coming Soon",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-42.png",
+    "alt": "Coming Soon, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-43",
+    "name": "It's a Surprise!",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-43.png",
+    "alt": "It's a Surprise!, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-44",
+    "name": "First Ultrasound",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-44.png",
+    "alt": "First Ultrasound, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-45",
+    "name": "Big Sister",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-45.png",
+    "alt": "Big Sister, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-46",
+    "name": "Big Brother",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-46.png",
+    "alt": "Big Brother, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-47",
+    "name": "New Parents Club",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-47.png",
+    "alt": "New Parents Club, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-48",
+    "name": "Hello Little One",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-48.png",
+    "alt": "Hello Little One, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-49",
+    "name": "Tiny Toes",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-49.png",
+    "alt": "Tiny Toes, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  },
+  {
+    "id": "sticker-50",
+    "name": "Our Little Star",
+    "theme": "Baby Announcement & Milestone",
+    "image": "/stickers/sticker-50.png",
+    "alt": "Our Little Star, an original Baby Announcement & Milestone collectible sticker",
+    "width": 1024,
+    "height": 1024
+  }
+]

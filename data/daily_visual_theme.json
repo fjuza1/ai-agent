@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-19T22:19:08Z",
+  "active": {
+    "name": "Cozy Nordic Holiday",
+    "bg_primary": "#F8F5EF",
+    "bg_card": "#FFFDF8",
+    "text_primary": "#25211C",
+    "text_muted": "#544D43",
+    "accent_primary": "#71352E",
+    "accent_secondary": "#285747",
+    "text_on_accent": "#FFFFFF",
+    "badge_bg": "#F1D9A8",
+    "text_on_badge": "#352718",
+    "border_color": "#C9BFAF",
+    "radius_card": "18px",
+    "shadow_card": "0 8px 24px rgba(37, 33, 28, 0.10)",
+    "font_display": "Georgia, serif",
+    "animation_style": "cubic-bezier(0.2, 0.8, 0.2, 1)"
+  },
+  "presets": [
+    {
+      "quality_score": 0.96,
+      "theme": {
+        "name": "Cozy Nordic Holiday",
+        "bg_primary": "#F8F5EF",
+        "bg_card": "#FFFDF8",
+        "text_primary": "#25211C",
+        "text_muted": "#544D43",
+        "accent_primary": "#71352E",
+        "accent_secondary": "#285747",
+        "text_on_accent": "#FFFFFF",
+        "badge_bg": "#F1D9A8",
+        "text_on_badge": "#352718",
+        "border_color": "#C9BFAF",
+        "radius_card": "18px",
+        "shadow_card": "0 8px 24px rgba(37, 33, 28, 0.10)",
+        "font_display": "Georgia, serif",
+        "animation_style": "cubic-bezier(0.2, 0.8, 0.2, 1)"
+      }
+    },
+    {
+      "quality_score": 0.93,
+      "theme": {
+        "name": "Playful Pop Boutique",
+        "bg_primary": "#FFF7FC",
+        "bg_card": "#FFFFFF",
+        "text_primary": "#291B2A",
+        "text_muted": "#59485B",
+        "accent_primary": "#642A7D",
+        "accent_secondary": "#07566B",
+        "text_on_accent": "#FFFFFF",
+        "badge_bg": "#FFD3E8",
+        "text_on_badge": "#3D1430",
+        "border_color": "#D8C1D5",
+        "radius_card": "22px",
+        "shadow_card": "0 8px 24px rgba(41, 27, 42, 0.10)",
+        "font_display": "Trebuchet MS, sans-serif",
+        "animation_style": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+      }
+    },
+    {
+      "quality_score": 0.94,
+      "theme": {
+        "name": "Warm Artisan Apothecary",
+        "bg_primary": "#FAF3E8",
+        "bg_card": "#FFFCF5",
+        "text_primary": "#30231C",
+        "text_muted": "#59473A",
+        "accent_primary": "#713D2B",
+        "accent_secondary": "#40572F",
+        "text_on_accent": "#FFFFFF",
+        "badge_bg": "#EED4B4",
+        "text_on_badge": "#382219",
+        "border_color": "#D3BEA3",
+        "radius_card": "16px",
+        "shadow_card": "0 8px 24px rgba(48, 35, 28, 0.10)",
+        "font_display": "Georgia, serif",
+        "animation_style": "cubic-bezier(0.2, 0.8, 0.2, 1)"
+      }
+    },
+    {
+      "quality_score": 0.95,
+      "theme": {
+        "name": "Crisp Modern Wellness",
+        "bg_primary": "#F4F7FA",
+        "bg_card": "#FFFFFF",
+        "text_primary": "#1A2633",
+        "text_muted": "#485765",
+        "accent_primary": "#0B4E6F",
+        "accent_secondary": "#344B87",
+        "text_on_accent": "#FFFFFF",
+        "badge_bg": "#DCEAF5",
+        "text_on_badge": "#1D3445",
+        "border_color": "#BECBD5",
+        "radius_card": "14px",
+        "shadow_card": "0 8px 24px rgba(26, 38, 51, 0.09)",
+        "font_display": "system-ui, sans-serif",
+        "animation_style": "ease-out"
+      }
+    },
+    {
+      "quality_score": 0.92,
+      "theme": {
+        "name": "Festive Candy Shop",
+        "bg_primary": "#FFF7F1",
+        "bg_card": "#FFFFFF",
+        "text_primary": "#391624",
+        "text_muted": "#60434D",
+        "accent_primary": "#8B1538",
+        "accent_secondary": "#176047",
+        "text_on_accent": "#FFFFFF",
+        "badge_bg": "#FFE0A6",
+        "text_on_badge": "#391E16",
+        "border_color": "#E0C1B5",
+        "radius_card": "20px",
+        "shadow_card": "0 8px 24px rgba(57, 22, 36, 0.10)",
+        "font_display": "Trebuchet MS, sans-serif",
+        "animation_style": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+      }
+    }
+  ],
+  "trend": {
+    "signal_status": "feed_unavailable",
+    "provider": "curated-preset",
+    "observed_at": "2026-11-19T22:19:08Z",
+    "summary": "No configured public trend feed; applied the highest-scoring validated preset.",
+    "sources": [],
+    "observations": []
+  }
+}

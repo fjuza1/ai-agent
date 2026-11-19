@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // SQLite has a single writer: DATABASE_URL must set ?connection_limit=1&socket_timeout=10 (see .env.example).
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  connectAccountId String?
+  stickerCredits   Int       @default(0)
+  sessions         Session[]
+  stickers         Sticker[]
+  purchases        Purchase[]
+  listings         Listing[]
+  gifts            Gift[]
+  dailyUsage       StickerDailyUsage[]
+}
+
+model StickerDailyUsage {
+  userId String
+  day    String
+  count  Int    @default(0)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, day])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Sticker {
+  id          String    @id @default(cuid())
+  serial      String    @unique
+  name        String
+  imageId     String?
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id])
+  listing     Listing?
+  gift        Gift?
+  createdAt   DateTime  @default(now())
+
+  @@index([ownerId])
+}
+
+model Listing {
+  id        String   @id @default(cuid())
+  stickerId String   @unique
+  sticker   Sticker  @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  sellerId  String
+  seller    User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  priceCents Int
+  state     String   @default("active")
+  createdAt DateTime @default(now())
+  purchases Purchase[]
+
+  @@index([sellerId])
+}
+
+model Gift {
+  id        String   @id
+  stickerId String   @unique
+  sticker   Sticker  @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  @@index([ownerId])
+}
+
+// Recipients who opted out through the signed link in gift emails; checked before every send.
+model GiftEmailSuppression {
+  email     String   @id
+  createdAt DateTime @default(now())
+}
+
+model Purchase {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  kind             String
+  listingId        String?
+  listing          Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  stripeSessionId  String?  @unique
+  state            String   @default("pending")
+  createdAt        DateTime @default(now())
+  quotaDay         String?
+  quotaUnits       Int      @default(0)
+  creditUnits      Int      @default(0)
+
+  @@index([userId])
+  @@index([listingId])
+}

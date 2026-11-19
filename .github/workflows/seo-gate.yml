@@ -1,0 +1,35 @@
+name: Storefront SEO gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          DATABASE_URL: file:./dev.db
+      - run: npm run test:audit
+      - name: Audit storefront SEO
+        id: lighthouse
+        run: npm run audit:seo
+      - name: Upload Lighthouse reports
+        if: ${{ always() && steps.lighthouse.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: reports/lighthouse/
+          if-no-files-found: error

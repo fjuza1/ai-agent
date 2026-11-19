@@ -1,0 +1,1 @@
+# Generate using npm run ads:generate after configuring ADSENSE_CLIENT_ID.

@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  // Own output so this app never shares a generated client with sticker-market in the hoisted node_modules.
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  // SQLite has a single writer: DATABASE_URL must set ?connection_limit=1&socket_timeout=10 (see .env.example).
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String?
+  email              String    @unique
+  emailVerified      DateTime?
+  image              String?
+  passwordHash       String?
+  favoriteCategories Json      @default("[]") @map("favorite_categories")
+  emailAlertsEnabled Boolean   @default(false) @map("email_alerts_enabled")
+  alertIntervalHours Int       @default(4) @map("alert_interval_hours")
+  workdaysOnly       Boolean   @default(true) @map("workdays_only")
+  trackingEnabled    Boolean   @default(false) @map("tracking_enabled")
+  lastEmailedAt      DateTime? @map("last_emailed_at")
+  unsubscribeToken   String    @unique @default(uuid()) @map("unsubscribe_token")
+  createdAt          DateTime  @default(now())
+  accounts           Account[]
+  sessions           Session[]
+  favorites          Favorite[]
+  engagement         EmailEngagementLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  category  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId, category])
+}
+
+// event is "sent" (service delivery, used for the 7-day repeat exclusion) or "click" (only written while tracking_enabled).
+model EmailEngagementLog {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  category  String?
+  event     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, event, createdAt])
+}

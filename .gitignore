@@ -1,0 +1,17 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+apps/usa-christmas-supplements/lib/generated/
+data/*.lock
+data/*.tmp
+data/affiliate_clicks.jsonl
+/reports/lighthouse/

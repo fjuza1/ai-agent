@@ -1,0 +1,33 @@
+{
+  "name": "commerce-fleet-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "test:contact": "node --experimental-strip-types --test packages/contact-product/contact.test.mjs packages/rate-limit/rateLimit.test.mjs",
+    "db:generate": "npm run db:generate -w sticker-market -w usa-christmas-supplements",
+    "db:push": "npm run db:push -w sticker-market -w usa-christmas-supplements",
+    "ads:generate": "node --env-file-if-exists=.env scripts/generate-ads-txt.mjs",
+    "products:ingest": "node scripts/ingest-products.mjs",
+    "audit:seo": "node scripts/audit_seo.mjs",
+    "test:theme": "node --experimental-strip-types --test lib/themeValidator.test.mjs scripts/audit_seo.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint apps/sticker-market apps/usa-christmas-supplements",
+    "verify:zero-mistakes": "node --experimental-strip-types scripts/verify_zero_mistakes.mjs",
+    "test:audit": "node --test scripts/audit_seo.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/parser": "^8.73.0",
+    "chrome-launcher": "^1.2.3",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "lighthouse": "^13.6.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

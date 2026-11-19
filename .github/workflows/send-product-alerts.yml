@@ -1,0 +1,28 @@
+name: Send product alerts
+
+on:
+  schedule:
+    # 07:00, 11:00, 15:00 and 19:00 UTC, Monday to Friday: 08:00, 12:00, 16:00 and 20:00 CET.
+    - cron: "0 7,11,15,19 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: send-product-alerts
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Trigger the alert job
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SUPPLEMENT_APP_URL: ${{ vars.SUPPLEMENT_APP_URL }}
+        run: |
+          test -n "$CRON_SECRET" && test -n "$SUPPLEMENT_APP_URL"
+          curl --fail-with-body --silent --show-error --max-time 600 --retry 2 --retry-all-errors \
+            -X POST -H "Authorization: Bearer $CRON_SECRET" \
+            "${SUPPLEMENT_APP_URL%/}/api/cron/send-product-alerts"
