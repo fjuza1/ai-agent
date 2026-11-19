@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function DeliveryCountdown({ cutoff }) {
+export default function PreChristmasCountdownBanner({ cutoff }) {
   const [remaining, setRemaining] = useState(null);
   useEffect(() => {
     function update() { setRemaining(Math.max(0, Date.parse(cutoff.cutoff_at) - Date.now())); }

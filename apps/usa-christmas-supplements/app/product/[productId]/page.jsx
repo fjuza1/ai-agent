@@ -2,12 +2,16 @@ import { notFound } from "next/navigation";
 import { catalog } from "../../../lib/catalog";
 import { deliveryEstimate } from "../../../lib/delivery";
 import { checkout } from "../../actions";
-import FdaBadge from "../../../components/FdaBadge";
-import FavoritePills from "../../../components/FavoritePills";
+import FdaClearedOtcBadge from "../../../components/trust/FdaClearedOtcBadge";
+import FavoritePills from "../../../components/engagement/FavoritePills";
 import { categoriesFor, primaryCategory } from "../../../lib/categories";
-import ProductContactForm from "../../../components/ProductContactForm";
-import StoreButtons from "../../../components/StoreButtons";
-import { searchKeywords, usedForTags } from "../../../lib/discovery";
+import ProductContactForm from "../../../components/engagement/ProductContactForm";
+import ProductActions from "../../../components/commerce/ProductActions";
+import RecordView from "../../../components/commerce/RecordView";
+import MadeInUsaBadge from "../../../components/trust/MadeInUsaBadge";
+import { shopProduct } from "../../../lib/shopProduct";
+import StoreButtons from "../../../components/commerce/StoreButtons";
+import { safeStoreLinks, searchKeywords, usedForTags } from "../../../lib/discovery";
 import { pageMetadata, siteOrigin, structuredData } from "../../../../../packages/seo";
 
 async function findProduct(params) {
@@ -53,13 +57,14 @@ export default async function ProductPage({ params }) {
   return <article>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: structuredData(schemas) }} />
     <nav aria-label="Breadcrumb"><a href="/">Home</a> / {product.name}</nav>
-    <p className="text-sm uppercase tracking-widest mt-8">Verified USA manufacturing</p>
+    <RecordView productId={product.id} />
+    <p className="mt-8"><MadeInUsaBadge /></p>
     <h1 className="text-4xl font-bold mt-2">{product.name}</h1>
     <div className="mt-3 flex flex-wrap items-center gap-3" aria-label="Favorites">
       <FavoritePills mode="product" variant="prominent" productId={product.id} category={primaryCategory(product)} productName={product.name} />
       {productCategories.length > 0 && <FavoritePills mode="category" categories={productCategories} />}
     </div><p className="mt-4">{product.description}</p>
-    <FdaBadge product={product} />
+    <FdaClearedOtcBadge product={product} />
     {usedFor.length > 0 && <p className="mt-4">Used for: {usedFor.map((tag, index) => <span key={tag}>{index > 0 && ", "}<a href={`/?used_for=${encodeURIComponent(tag)}#shop`}>{tag}</a></span>)}</p>}
     <p className="text-2xl font-bold mt-4">${(product.price_cents / 100).toFixed(2)}</p>
     <p className="mt-4">{estimate ? `Estimated arrival: ${estimate}. This is not a guarantee.` : "Arrival estimate unavailable; consult the seller before ordering."}</p>
@@ -71,6 +76,7 @@ export default async function ProductPage({ params }) {
       product.delivery?.in_stock === false ? <p className="mt-6">Currently out of stock.</p> :
       <form action={checkout} className="mt-6"><input type="hidden" name="productId" value={product.id}/>{product.discreet_gift_box_available && <label className="block mb-4"><input type="checkbox" name="discreetGiftBox" value="yes"/> Discreet Unbranded Gift Box</label>}<button>Buy with Stripe</button></form>}
     <StoreButtons product={product} direct={false} detailed />
+    <ProductActions product={shopProduct(product, safeStoreLinks(product))} />
     <ProductContactForm productId={product.id} productTitle={product.name} productUrl={url} />
   </article>;
 }

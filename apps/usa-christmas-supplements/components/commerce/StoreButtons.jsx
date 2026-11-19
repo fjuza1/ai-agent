@@ -1,4 +1,4 @@
-import { safeStoreLinks } from "../lib/discovery";
+import { safeStoreLinks } from "../../lib/discovery";
 
 export default function StoreButtons({ product, direct = true, detailed = false }) {
   const links = safeStoreLinks(product);

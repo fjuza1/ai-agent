@@ -18,7 +18,7 @@ export async function checkout(form) {
     shipping_address_collection: { allowed_countries: ["US"] },
     success_url: `${url.origin}/?checkout=success`,
     cancel_url: `${url.origin}/?checkout=cancelled`,
-    metadata: { store: "usa-christmas-supplements", product_ids: ids.join(","), discreet_gift_box: discreet ? "requested" : "no" },
+    metadata: { store: "usa-christmas-supplements", product_ids: ids.join(","), discreet_gift_box: discreet ? "requested" : "no", sticker_gift: form.get("stickerGift") === "yes" ? "requested" : "no" },
   };
   // Same cart within a 5-minute bucket (double-click, client retry) reuses one Checkout Session; any cart/price change yields a new key.
   const idempotencyKey = createHash("sha256").update(JSON.stringify([params, Math.floor(Date.now() / 300_000)])).digest("hex");

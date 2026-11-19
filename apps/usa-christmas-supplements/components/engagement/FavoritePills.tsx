@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { categoryPill, FAVORITE_CATEGORIES, type FavoriteCategory } from "../lib/categories.ts";
+import { categoryPill, FAVORITE_CATEGORIES, type FavoriteCategory } from "../../lib/categories.ts";
 import { getFavorites, INITIAL_STATE, savedCount, subscribeFavorites, toggleCategory, toggleProduct } from "./favoritesStore.ts";
 
 type CategoryProps = {

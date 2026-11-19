@@ -1,5 +1,5 @@
 import { parseCategories } from "../../../lib/categories";
-import FavoritePills from "../../../components/FavoritePills";
+import FavoritePills from "../../../components/engagement/FavoritePills";
 import { magicLinkEnabled } from "../../../lib/auth";
 import { requireUser } from "../../../lib/session";
 import { pageMetadata, siteOrigin } from "../../../../../packages/seo";

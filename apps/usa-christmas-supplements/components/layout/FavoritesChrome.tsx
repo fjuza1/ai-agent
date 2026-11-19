@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { categoryPill, FAVORITE_CATEGORIES, OTHER_CATEGORY } from "../lib/categories.ts";
-import { useFavorites } from "./FavoritePills.tsx";
-import { bootFavorites, dismissToast, getToasts, NO_TOASTS, subscribeToasts, toggleProduct } from "./favoritesStore.ts";
+import { categoryPill, FAVORITE_CATEGORIES, OTHER_CATEGORY } from "../../lib/categories.ts";
+import { useFavorites } from "../engagement/FavoritePills.tsx";
+import { bootFavorites, dismissToast, getToasts, NO_TOASTS, subscribeToasts, toggleProduct } from "../engagement/favoritesStore.ts";
 
 const ORDER: string[] = [...FAVORITE_CATEGORIES, OTHER_CATEGORY];
 
