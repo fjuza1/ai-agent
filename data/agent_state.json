@@ -1,4 +1,17 @@
 {
   "version": 1,
-  "runs": []
+  "runs": [
+    {
+      "id": "72db251c-3c25-48fa-b766-7360f7d627e4",
+      "day": "2026-11-20",
+      "started_at": "2026-11-20T02:12:55.458756+00:00",
+      "allocated_seconds": 5280,
+      "allocations": {
+        "2026-11-20": 5280
+      },
+      "status": "reserved",
+      "completed": [],
+      "failed": []
+    }
+  ]
 }
