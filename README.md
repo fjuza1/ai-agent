@@ -380,6 +380,17 @@ does not implement regional rules, TCF/GPP, opt-out signals, or a certified CMP.
 Configure a Google-certified CMP and applicable privacy/cookie notices before
 serving ads, especially in the EEA, UK, Switzerland, and US states.
 
+### Collecting public dashboard identifiers
+
+`python agents/browser_key_collector.py` attaches to an open Chrome session and
+can save allowlisted public identifiers and a verified SendGrid sender to the
+ignored `.env.local` file. It does not collect API keys or other secrets. To
+keep dashboard content off hosted model services, configure a local
+OpenAI-compatible model with `BROWSER_KEY_COLLECTOR_BASE_URL` (defaults to
+`http://127.0.0.1:1234/v1`) and `BROWSER_KEY_COLLECTOR_MODEL` (defaults to
+`local-model`). The script rejects non-loopback model URLs. Complete any login
+or 2FA prompts in Chrome when asked; extracted values are not printed.
+
 ## Daily visual themes and verification
 
 `data/daily_visual_theme.json` is the visual-only theme contract used by both
