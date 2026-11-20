@@ -5,12 +5,13 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import unittest
 from unittest.mock import AsyncMock, patch
 
 from agents.fleet_runner import (
-    FleetError, MAX_RUNTIME_SECONDS, RESERVATION, budget_limit,
-    daily_allocations, fetch_source, main, prepare_run, read_ledger, role_for, run_fleet, settle,
+    FleetError, MAX_CONCURRENCY, MAX_RUNTIME_SECONDS, RESERVATION, budget_limit,
+    daily_allocations, fetch_source, main, persist_reservations, prepare_run, read_ledger, role_for, run_fleet, settle,
 )
 
 
@@ -183,6 +184,67 @@ class FleetTests(unittest.TestCase):
         self.assertEqual(state["runs"][0]["failed"][0]["job_id"], "slow")
         entry = next(iter(read_ledger(self.root / "data" / "cost_ledger.json")["months"].values()))[0]
         self.assertEqual(entry["state"], "reserved")
+
+    def test_reservations_are_pushed_to_the_staging_branch_and_never_to_main(self):
+        with patch("agents.fleet_runner.subprocess.run") as run, patch.dict("os.environ", {"AGENT_GIT_BRANCH": ""}):
+            persist_reservations(self.root, time.monotonic() + 60)
+        self.assertEqual(run.call_args_list[-1].args[0], ["git", "push", "origin", "HEAD:refs/heads/agent-staging"])
+        for branch in ("main", "MASTER", "../main", "agent staging"):
+            with self.subTest(branch=branch), patch("agents.fleet_runner.subprocess.run") as run, \
+                    patch.dict("os.environ", {"AGENT_GIT_BRANCH": branch}), self.assertRaises(FleetError):
+                persist_reservations(self.root, time.monotonic() + 60)
+            run.assert_not_called()
+
+    def test_at_most_25_of_the_1000_workers_are_in_flight(self):
+        self.write("agent_queue.json", [{"id": f"job-{i}", "role": "analyst", "topic": "Concept"} for i in range(40)])
+        active = peak = 0
+
+        class FakeResponse:
+            async def __aenter__(self):
+                nonlocal active, peak
+                active += 1
+                peak = max(peak, active)
+                await asyncio.sleep(0.01)
+                return self
+            async def __aexit__(self, *args):
+                nonlocal active
+                active -= 1
+            def raise_for_status(self):
+                pass
+            async def json(self):
+                return {"usage": {"prompt_tokens": 10, "completion_tokens": 10},
+                        "choices": [{"message": {"content": '{"summary":"draft"}'}}]}
+
+        class FakeSession:
+            def __init__(self, **kwargs):
+                pass
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def post(self, *args, **kwargs):
+                return FakeResponse()
+
+        with patch.dict("os.environ", {"LLM_API_KEY": "test", "INDEXNOW_ENABLED": "false"}), \
+                patch("agents.fleet_runner.aiohttp.ClientSession", FakeSession), \
+                patch("agents.fleet_runner.aiohttp.TCPConnector"):
+            asyncio.run(run_fleet(self.root, 1000, 60, Decimal("1000"), False))
+        self.assertEqual(peak, MAX_CONCURRENCY)
+        self.assertEqual(MAX_CONCURRENCY, 25)
+        drafts = json.loads((self.root / "data" / "agent_drafts.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(drafts), 40)
+
+    def test_dry_run_simulates_queued_jobs_without_a_key_network_or_data_writes(self):
+        self.write("agent_queue.json", [{"id": "one", "role": "scout", "topic": "Evidence", "source_url": "https://example.org"}])
+        before = {path.name: path.read_bytes() for path in (self.root / "data").iterdir()}
+        with tempfile.TemporaryDirectory() as scratch, \
+                patch.dict("os.environ", {"AGENT_DRY_RUN": "1", "AGENT_DRY_RUN_DIR": scratch, "LLM_API_KEY": ""}), \
+                patch("agents.fleet_runner.aiohttp.ClientSession.post", side_effect=AssertionError("no network in a dry run")), \
+                patch("agents.fleet_runner.persist_reservations", side_effect=AssertionError("no push in a dry run")):
+            asyncio.run(run_fleet(self.root, 1000, 5, Decimal("1000"), True))
+            simulated = json.loads(next(Path(scratch).rglob("agent_drafts.json")).read_text(encoding="utf-8"))
+        self.assertEqual(simulated[0]["output"]["dry_run"], True)
+        self.assertEqual({path.name: path.read_bytes() for path in (self.root / "data").iterdir()}, before)
 
     def test_missing_and_invalid_ledger_fail_closed(self):
         path = self.root / "data" / "cost_ledger.json"

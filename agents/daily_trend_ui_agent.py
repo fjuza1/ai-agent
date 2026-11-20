@@ -16,13 +16,13 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import aiohttp
-from filelock import FileLock
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from agents import safe_io
 from agents.fleet_runner import (
     MAX_OUTPUT_TOKENS,
     MODEL,
@@ -58,23 +58,7 @@ def utc_now() -> str:
 
 
 def atomic_write(path: Path, value: object) -> None:
-    temp = path.with_suffix(path.suffix + ".tmp")
-    with temp.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(value, stream, indent=2, ensure_ascii=True)
-        stream.write("\n")
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temp, path)
-
-
-def atomic_write_text(path: Path, value: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_suffix(path.suffix + ".tmp")
-    with temp.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(value)
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temp, path)
+    safe_io.atomic_write_json(path, value)
 
 
 def write_theme_assets(theme: dict) -> None:
@@ -95,7 +79,7 @@ def write_theme_assets(theme: dict) -> None:
 </svg>
 '''
     for app in ("sticker-market", "usa-christmas-supplements"):
-        atomic_write_text(ROOT / "apps" / app / "public" / "og" / "daily-theme.svg", svg)
+        safe_io.atomic_write_text(ROOT / "apps" / app / "public" / "og" / "daily-theme.svg", svg)
 
 
 def read_signals(value: object) -> list[dict[str, object]]:
@@ -163,19 +147,20 @@ def highest_scoring_preset(document: dict) -> dict:
 
 def record_run_status_locked(run_id: str, status: str, error: str | None = None) -> None:
     path = ROOT / "data" / "agent_state.json"
-    state = json.loads(path.read_text(encoding="utf-8"))
-    run = next(run for run in state["runs"] if run["id"] == run_id)
-    run["status"] = status
-    run["finished_at"] = utc_now()
-    if error:
-        run.setdefault("failed", []).append({"job_id": "daily-theme", "error": error[:500]})
-    atomic_write(path, state)
+    with safe_io.file_lock(path):
+        state = safe_io.atomic_read_json(path)
+        run = next(run for run in state["runs"] if run["id"] == run_id)
+        run["status"] = status
+        run["finished_at"] = utc_now()
+        if error:
+            run.setdefault("failed", []).append({"job_id": "daily-theme", "error": error[:500]})
+        atomic_write(path, state)
 
 
 async def synthesize_theme(signals: list[dict[str, object]], presets: list[dict]) -> tuple[dict, dict | None]:
     api_key = os.getenv("LLM_API_KEY", "").strip()
     feed_url = os.getenv("TREND_FEED_URL", "").strip()
-    if not api_key or not feed_url or not signals:
+    if not api_key or not feed_url or not signals or safe_io.dry_run():
         return {}, None
 
     job_id = f"daily-theme-{datetime.now(timezone.utc):%Y%m%d}-{uuid4().hex[:8]}"
@@ -186,7 +171,7 @@ async def synthesize_theme(signals: list[dict[str, object]], presets: list[dict]
     usage = None
     started = time.monotonic()
     try:
-        with FileLock(str(ROOT / "data" / "fleet.lock"), timeout=10):
+        with safe_io.file_lock(ROOT / "data" / "fleet", timeout=10):
             run_id, reservations = prepare_run(
                 ROOT,
                 [{"id": job_id}],
@@ -227,7 +212,7 @@ async def synthesize_theme(signals: list[dict[str, object]], presets: list[dict]
         return {}, usage
     finally:
         if run_id:
-            with FileLock(str(ROOT / "data" / "fleet.lock"), timeout=10):
+            with safe_io.file_lock(ROOT / "data" / "fleet", timeout=10):
                 if usage and reservation_id:
                     try:
                         settle(ROOT, reservation_id, usage["prompt_tokens"], usage["completion_tokens"])
@@ -239,13 +224,14 @@ async def synthesize_theme(signals: list[dict[str, object]], presets: list[dict]
         LOG.info("Theme synthesis accounting completed in %.1f seconds.", time.monotonic() - started)
 
 
-async def main_async() -> int:
-    original = json.loads(THEME_PATH.read_text(encoding="utf-8"))
+async def main_async(og_assets: bool = False) -> int:
+    original = safe_io.atomic_read_json(THEME_PATH)
     valid, error = validate_theme_document(original)
     if not valid:
         raise ValueError(f"Existing visual theme is invalid; refusing to overwrite it: {error}")
 
     feed_url = os.getenv("TREND_FEED_URL", "").strip()
+    api_key = "" if safe_io.dry_run() else os.getenv("LLM_API_KEY", "").strip()
     signals: list[dict[str, object]] = []
     sources: list[str] = []
     provider = "curated-preset"
@@ -267,7 +253,7 @@ async def main_async() -> int:
             summary = "The configured public trend feed could not be read; applied the highest-scoring validated preset."
 
     chosen = highest_scoring_preset(original)
-    if signals and not os.getenv("LLM_API_KEY", "").strip():
+    if signals and not api_key:
         chosen = select_preset(original, signals)
     elif signals:
         generated, _ = await synthesize_theme(signals, [preset["theme"] for preset in original["presets"]])
@@ -325,7 +311,10 @@ async def main_async() -> int:
     if not valid:
         raise ValueError(f"Validated fallback theme is invalid; file was not changed: {error}")
 
-    write_theme_assets(chosen)
+    # By default this agent's only output is data/daily_visual_theme.json (paid synthesis also records its
+    # spend in the fleet ledger). The preview SVGs live under apps/*/public, which dev servers watch.
+    if og_assets:
+        write_theme_assets(chosen)
     atomic_write(THEME_PATH, document)
     LOG.info("Wrote validated '%s' theme; status=%s.", chosen["name"], document["trend"]["signal_status"])
     return 0
@@ -334,13 +323,15 @@ async def main_async() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Select a daily visual theme from bounded public trend signals.")
     parser.add_argument("--persist-reservations", action="store_true")
+    parser.add_argument("--og-assets", action="store_true",
+                        help="Also regenerate apps/*/public/og/daily-theme.svg (off by default).")
     args = parser.parse_args()
     load_dotenv(ROOT / ".env")
-    if os.getenv("GITHUB_ACTIONS") == "true" and not args.persist_reservations:
+    if os.getenv("GITHUB_ACTIONS") == "true" and not args.persist_reservations and not safe_io.dry_run():
         LOG.error("Actions theme runs require --persist-reservations before paid model calls.")
         return 1
     try:
-        return asyncio.run(main_async())
+        return asyncio.run(main_async(args.og_assets))
     except (OSError, ValueError, FleetError) as error:
         LOG.error("%s: %s", type(error).__name__, error)
         return 1

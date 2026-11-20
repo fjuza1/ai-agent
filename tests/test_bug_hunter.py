@@ -216,6 +216,23 @@ class BugHunterTests(unittest.TestCase):
             summary = self.audit(full_scan=True, llm=True)
         self.assertFalse(summary["state"]["llm"]["enabled"])
 
+    def test_gate_failures_are_logged_and_survive_later_audits(self):
+        self.write("lib/a.js", "export const a = 1;\n")
+        self.audit(full_scan=True)
+        bh.record_pipeline_failure(self.root, "verify", "Lighthouse SEO below 97 | no pull request", "https://github.com/o/r/actions/runs/7")
+        report = (self.root / "BUG_REPORT.md").read_text(encoding="utf-8")
+        self.assertIn("| `verify` | Lighthouse SEO below 97 \\| no pull request | [log](https://github.com/o/r/actions/runs/7) |", report)
+        self.assertIn("## LOW (0 open)", report)
+        self.write("lib/b.js", "export const b = process.env.NAME.trim();\n")
+        self.assertTrue(self.audit()["wrote"])
+        bh.record_pipeline_failure(self.root, "promote", "merge refused", "javascript:alert(1)")
+        report = (self.root / "BUG_REPORT.md").read_text(encoding="utf-8")
+        self.assertEqual((report.count(bh.PIPELINE_BEGIN), report.count("## Pipeline gate failures")), (1, 1))
+        self.assertLess(report.index("| `promote` | merge refused |  |"), report.index("| `verify` |"))
+        state = json.loads((self.root / "data" / "qa_session_state.json").read_text(encoding="utf-8"))
+        self.assertEqual([item["stage"] for item in state["pipeline_failures"]], ["promote", "verify"])
+        self.assertTrue(state["open_defects"])
+
     def test_report_is_ordered_by_severity(self):
         self.write("lib/a.js", 'const k = process.env.A.trim();\nconst s = "' + "sk_" + "live_" + 'A1b2C3d4E5f6G7h8I9j0";\n')
         self.audit(full_scan=True)

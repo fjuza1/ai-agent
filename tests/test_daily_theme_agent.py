@@ -41,9 +41,13 @@ class DailyThemeAgentTests(unittest.TestCase):
             }]}
             with patch.object(theme_agent, "THEME_PATH", path), \
                     patch.object(theme_agent, "fetch_public_json", new=AsyncMock(return_value=feed)), \
-                    patch.object(theme_agent, "write_theme_assets"), \
+                    patch.object(theme_agent, "write_theme_assets") as assets, \
                     patch.dict("os.environ", {"TREND_FEED_URL": "https://feed.example/rank?api_key=hidden", "LLM_API_KEY": ""}):
                 self.assertEqual(asyncio.run(theme_agent.main_async()), 0)
+                # The theme JSON is the agent's only default output; public/ assets are opt-in.
+                assets.assert_not_called()
+                self.assertEqual(asyncio.run(theme_agent.main_async(og_assets=True)), 0)
+                assets.assert_called_once()
             updated = json.loads(path.read_text(encoding="utf-8"))
 
         self.assertEqual(updated["active"]["name"], "Playful Pop Boutique")

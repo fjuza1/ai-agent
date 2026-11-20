@@ -151,6 +151,17 @@ class CatalogLinkerTests(unittest.TestCase):
         with self.assertRaises(FleetError):
             self.run_linker(api_key="test")
         self.assertNotIn("store_links", self.read("supplements.json")[0])
+    def test_catalog_edited_during_a_run_is_not_overwritten(self):
+        self.write("supplements.json", [product(0)])
+        edited = [product(0, description="Edited by a reviewer while the model was running")]
+
+        async def model(*args):
+            self.write("supplements.json", edited)
+            return reply([{"id": "item-0", "used_for": ["Winter Energy"], "search_keywords": ["winter energy"]}])
+
+        with patch("agents.daily_catalog_linker.request_enrichment", model), self.assertRaisesRegex(FleetError, "changed during this run"):
+            self.run_linker(api_key="test")
+        self.assertEqual(self.read("supplements.json"), edited)
 
 
 if __name__ == "__main__":

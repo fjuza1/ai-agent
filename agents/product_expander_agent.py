@@ -4,7 +4,6 @@ import argparse
 import asyncio
 from datetime import datetime, timezone
 from io import BytesIO
-import json
 import logging
 import os
 from pathlib import Path
@@ -19,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from agents import safe_io
 from agents.public_sources import fetch_public_json, public_origin, validate_public_https_url
 from agents.fleet_runner import ROOT, PublicResolver
 
@@ -155,7 +155,7 @@ def check_product_claims(item: object) -> tuple[dict | None, str]:
 def load_catalog() -> list[dict]:
     configured = os.getenv("SUPPLEMENT_CATALOG_PATH", "").strip()
     path = Path(configured).resolve() if configured else ROOT / "data" / "supplements.json"
-    value = json.loads(path.read_text(encoding="utf-8"))
+    value = safe_io.atomic_read_json(path)
     if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
         raise ValueError("Published supplement catalog must be a JSON array of products.")
     return value
@@ -211,13 +211,7 @@ async def expand(feed_url: str) -> dict:
 
 
 def atomic_write(value: object) -> None:
-    temp = OUTPUT_PATH.with_suffix(OUTPUT_PATH.suffix + ".tmp")
-    with temp.open("w", encoding="utf-8", newline="\n") as stream:
-        json.dump(value, stream, indent=2, ensure_ascii=True)
-        stream.write("\n")
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temp, OUTPUT_PATH)
+    safe_io.atomic_write_json(OUTPUT_PATH, value)
 
 
 async def main_async() -> int:

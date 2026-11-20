@@ -36,6 +36,11 @@ from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from agents import safe_io  # noqa: E402
+
 LOG = logging.getLogger("bug-hunter")
 
 STATE_VERSION = 1
@@ -44,6 +49,10 @@ REPORT_PATH = Path("BUG_REPORT.md")
 LEDGER_PATH = Path("data") / "cost_ledger.json"
 SEVERITIES = ("CRITICAL", "HIGH", "MEDIUM", "LOW")
 MAX_RESOLVED_HISTORY = 500
+MAX_PIPELINE_FAILURES = 20
+PIPELINE_BEGIN = "<!-- pipeline-gates:begin -->"
+PIPELINE_END = "<!-- pipeline-gates:end -->"
+RUN_URL = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/actions/runs/\d+")
 
 CAT_AUTH = "Auth/Security"
 CAT_BILLING = "Stripe/Billing"
@@ -80,17 +89,11 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def atomic_write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_suffix(path.suffix + ".tmp")
-    with temp.open("w", encoding="utf-8", newline="\n") as stream:
-        stream.write(text)
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temp, path)
+    safe_io.atomic_write_text(path, text)
 
 
 def atomic_write_json(path: Path, value: object) -> None:
-    atomic_write_text(path, json.dumps(value, indent=2, ensure_ascii=True, sort_keys=False) + "\n")
+    safe_io.atomic_write_json(path, value)
 
 
 # --------------------------------------------------------------------------------------------
@@ -1345,7 +1348,7 @@ class BudgetExceeded(RuntimeError):
 
 
 def read_ledger(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = safe_io.atomic_read_json(path)
     if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("months"), dict):
         raise BudgetExceeded("Ledger missing or invalid; refusing to reset it.")
     for month, entries in data["months"].items():
@@ -1372,28 +1375,31 @@ def reserve_budget(root: Path, cost: Decimal, limit: Decimal, label: str, run_id
     """Appends a reserved entry; aborts before the monthly cap would be reached."""
     path = root / LEDGER_PATH
     month = (now or datetime.now(timezone.utc)).strftime("%Y-%m")
-    ledger = read_ledger(path)
-    entries = ledger["months"].setdefault(month, [])
-    spent = sum((Decimal(e["charged_usd"]) for e in entries), Decimal("0"))
-    if spent >= limit or spent + cost >= limit:
-        raise BudgetExceeded(f"Budget hard-stop for {month}: ${spent} spent/reserved; another ${cost} would reach ${limit}.")
-    identifier = str(uuid4())
-    entries.append({"id": identifier, "run_id": run_id, "job_id": label, "agent": "bug-hunter", "state": "reserved", "charged_usd": str(cost), "model": MODEL})
-    atomic_write_json(path, ledger)
+    # The check and the append are one transaction, so a concurrent agent cannot reserve the same headroom.
+    with safe_io.file_lock(path):
+        ledger = read_ledger(path)
+        entries = ledger["months"].setdefault(month, [])
+        spent = sum((Decimal(e["charged_usd"]) for e in entries), Decimal("0"))
+        if spent >= limit or spent + cost >= limit:
+            raise BudgetExceeded(f"Budget hard-stop for {month}: ${spent} spent/reserved; another ${cost} would reach ${limit}.")
+        identifier = str(uuid4())
+        entries.append({"id": identifier, "run_id": run_id, "job_id": label, "agent": "bug-hunter", "state": "reserved", "charged_usd": str(cost), "model": MODEL})
+        atomic_write_json(path, ledger)
     return identifier
 
 
 def settle_budget(root: Path, identifier: str, prompt_tokens: int, completion_tokens: int) -> None:
     path = root / LEDGER_PATH
-    ledger = read_ledger(path)
-    matches = [e for entries in ledger["months"].values() for e in entries if e["id"] == identifier]
-    if len(matches) != 1 or matches[0]["state"] != "reserved":
-        raise BudgetExceeded("Reservation is missing or already settled.")
-    prompt_tokens, completion_tokens = max(0, int(prompt_tokens)), min(max(0, int(completion_tokens)), MAX_OUTPUT_TOKENS)
-    reserved = Decimal(matches[0]["charged_usd"])
-    actual = prompt_tokens * INPUT_RATE + completion_tokens * OUTPUT_RATE
-    matches[0].update(state="settled", prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, charged_usd=str(min(actual, reserved)))
-    atomic_write_json(path, ledger)
+    with safe_io.file_lock(path):
+        ledger = read_ledger(path)
+        matches = [e for entries in ledger["months"].values() for e in entries if e["id"] == identifier]
+        if len(matches) != 1 or matches[0]["state"] != "reserved":
+            raise BudgetExceeded("Reservation is missing or already settled.")
+        prompt_tokens, completion_tokens = max(0, int(prompt_tokens)), min(max(0, int(completion_tokens)), MAX_OUTPUT_TOKENS)
+        reserved = Decimal(matches[0]["charged_usd"])
+        actual = prompt_tokens * INPUT_RATE + completion_tokens * OUTPUT_RATE
+        matches[0].update(state="settled", prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, charged_usd=str(min(actual, reserved)))
+        atomic_write_json(path, ledger)
 
 
 LLM_SYSTEM_PROMPT = (
@@ -1490,17 +1496,17 @@ def iter_files(root: Path):
 
 def new_state() -> dict:
     return {"version": STATE_VERSION, "session_id": "", "session_count": 0, "last_run_timestamp": "", "scanned_file_hashes": {},
-            "route_fingerprints": {}, "tool_runs": {}, "llm": {}, "open_defects": [], "resolved_defects": [], "content_fingerprint": ""}
+            "route_fingerprints": {}, "tool_runs": {}, "llm": {}, "open_defects": [], "resolved_defects": [], "content_fingerprint": "",
+            "pipeline_failures": []}
 
 
 def load_state(root: Path) -> dict:
-    path = root / STATE_PATH
-    if not path.is_file():
-        return new_state()
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = safe_io.atomic_read_json(root / STATE_PATH)
         if isinstance(data, dict) and data.get("version") == STATE_VERSION:
             return {**new_state(), **data}
+    except FileNotFoundError:
+        pass
     except ValueError:
         LOG.warning("State file is corrupt; starting a fresh session history.")
     return new_state()
@@ -1549,6 +1555,44 @@ def defect_order(d: dict):
 
 def cell(value: str) -> str:
     return str(value).replace("|", "\\|").replace("\n", "<br>")
+
+
+def render_pipeline_section(state: dict) -> str:
+    """Gate failures recorded by agents/run_isolated.py and the daily workflow; kept across report regenerations."""
+    failures = [item for item in state.get("pipeline_failures") or [] if isinstance(item, dict)]
+    lines = [PIPELINE_BEGIN, "## Pipeline gate failures", ""]
+    if failures:
+        lines += ["_Each run below stopped before promotion: `main` was left untouched and the agent output stayed on the staging branch._", "",
+                  "| When (UTC) | Stage | Detail | Run |", "|---|---|---|---|"]
+        for item in failures[:10]:
+            link = f"[log]({item['run_url']})" if item.get("run_url") else ""
+            lines.append(f"| {cell(item.get('at', ''))} | `{cell(item.get('stage', ''))}` | {cell(item.get('detail', ''))} | {link} |")
+    else:
+        lines.append("_None recorded._")
+    lines.append(PIPELINE_END)
+    return "\n".join(lines) + "\n"
+
+
+def record_pipeline_failure(root: Path, stage: str, detail: str, run_url: str = "") -> dict:
+    """Logs a failed pipeline stage or verification gate in the QA state and in BUG_REPORT.md."""
+    root = root.resolve()
+    entry = {"at": utc_now(), "stage": clip(stage, 60), "detail": clip(detail, 300),
+             "run_url": run_url if RUN_URL.fullmatch(run_url or "") else ""}
+    with safe_io.file_lock(root / STATE_PATH):
+        state = load_state(root)
+        state["pipeline_failures"] = [entry, *state["pipeline_failures"]][:MAX_PIPELINE_FAILURES]
+        atomic_write_json(root / STATE_PATH, state)
+        section = render_pipeline_section(state)
+        try:
+            report = safe_io.atomic_read_text(root / REPORT_PATH)
+        except FileNotFoundError:
+            report = "# BUG REPORT\n"
+        if PIPELINE_BEGIN in report and PIPELINE_END in report:
+            report = report[:report.index(PIPELINE_BEGIN)] + section.rstrip("\n") + report[report.index(PIPELINE_END) + len(PIPELINE_END):]
+        else:
+            report = report.rstrip("\n") + "\n\n" + section
+        atomic_write_text(root / REPORT_PATH, report)
+    return entry
 
 
 def render_report(state: dict, summary: dict) -> str:
@@ -1601,7 +1645,7 @@ def render_report(state: dict, summary: dict) -> str:
             lines.append(f"| `{d['id']}` | `{d['file']}:{d['line']}` | {d['category']} | {d['severity']} | {d.get('resolved_at', '')} |")
     else:
         lines.append("_Nothing verified yet._")
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines) + "\n\n" + render_pipeline_section(state)
 
 
 def fingerprint(state: dict) -> str:
@@ -1636,6 +1680,10 @@ def run_audit(root: Path, *, full_scan: bool = False, auto_fix: bool = False, ll
     session_id = str(uuid4())
     tools = tools or Tools(root)
     ctx = Context(root)
+    if safe_io.dry_run() and (auto_fix or llm):
+        # A dry run must not patch source files or spend budget that its scratch ledger would not record.
+        LOG.info("Dry run: --auto-fix and --llm are disabled.")
+        auto_fix = llm = False
     try:
         ctx.budget_limit = budget_limit(os.environ.get("MONTHLY_BUDGET_USD", "1000"))
     except BudgetExceeded as error:
@@ -1681,7 +1729,7 @@ def run_audit(root: Path, *, full_scan: bool = False, auto_fix: bool = False, ll
         api_key = os.environ.get("LLM_API_KEY", "").strip()
         if not api_key:
             llm_stats = {"enabled": False, "stopped": "LLM_API_KEY is not set"}
-        elif not (root / LEDGER_PATH).is_file():
+        elif not safe_io.resolve_read(root / LEDGER_PATH).is_file():
             llm_stats = {"enabled": False, "stopped": "cost_ledger.json is missing; refusing to spend without a ledger"}
         else:
             llm_findings, llm_stats = llm_review(root, list(sources.values()), api_key, ctx.budget_limit, llm_run_cap, llm_max_files, llm_caller)
@@ -1720,17 +1768,22 @@ def run_audit(root: Path, *, full_scan: bool = False, auto_fix: bool = False, ll
         "version": STATE_VERSION, "session_id": session_id, "session_count": state["session_count"] + 1, "last_run_timestamp": now,
         "scanned_file_hashes": dict(sorted(hashes.items())), "route_fingerprints": ctx.route_fingerprints, "tool_runs": tool_runs,
         "llm": llm_stats, "open_defects": open_defects, "resolved_defects": resolved, "content_fingerprint": "",
+        "pipeline_failures": state["pipeline_failures"],
     }
     new["content_fingerprint"] = fingerprint(new)
     summary = {"mode": mode, "scanned": len(sources), "total": len(hashes), "skipped": len(hashes) - len(sources), "deleted": len(deleted),
                "autofix_notes": autofix_notes, "autofixed": len(autofixed), "wrote": False, "seconds": round(time.monotonic() - started, 1)}
-    unchanged = new["content_fingerprint"] == state.get("content_fingerprint") and (root / REPORT_PATH).is_file() and not autofix_notes
+    unchanged = (new["content_fingerprint"] == state.get("content_fingerprint")
+                 and safe_io.resolve_read(root / REPORT_PATH).is_file() and not autofix_notes)
     if unchanged and not full_scan and not force_write:
         summary["note"] = "No material change since the previous session; state and report left untouched."
         summary["open"], summary["state"] = len(state["open_defects"]), state
         return summary
-    atomic_write_json(root / STATE_PATH, new)
-    atomic_write_text(root / REPORT_PATH, render_report(new, summary))
+    with safe_io.file_lock(root / STATE_PATH):
+        # Gate failures logged while this audit was scanning must survive the rewrite.
+        new["pipeline_failures"] = load_state(root)["pipeline_failures"]
+        atomic_write_json(root / STATE_PATH, new)
+        atomic_write_text(root / REPORT_PATH, render_report(new, summary))
     summary.update(wrote=True, open=len(open_defects), state=new)
     return summary
 

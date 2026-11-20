@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
-  # Pushes only run the free bug-hunter job below; the paid fleet jobs are skipped for them.
+  # Pushes only run the free, read-only audit job at the end; the paid agent jobs are skipped and nothing is committed.
   push:
     branches: [main]
 
@@ -15,51 +15,78 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Agents commit here and nowhere else. main only changes through the pull request opened by the promote job.
+  AGENT_BRANCH: agent-staging
+
+# The scheduled jobs are budgeted to finish inside two hours in total: 75 + 35 + 5 + 5 minutes.
 jobs:
-  fleet:
+  agents:
     if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 75
     permissions:
       contents: write
+    outputs:
+      sha: ${{ steps.publish.outputs.sha }}
+      pipeline: ${{ steps.pipeline.outcome }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+      - name: Configure bot identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Check out agent-staging and bring it up to date with main
+        run: |
+          set -euo pipefail
+          status=0
+          git ls-remote --exit-code --heads origin "$AGENT_BRANCH" >/dev/null || status=$?
+          if [ "$status" -eq 0 ]; then
+            git checkout -B "$AGENT_BRANCH" "origin/$AGENT_BRANCH"
+            if ! git merge --no-edit origin/main; then
+              git merge --abort
+              echo "::error::main no longer merges cleanly into $AGENT_BRANCH. Resolve the conflict on $AGENT_BRANCH by hand; main was not changed."
+              exit 1
+            fi
+          elif [ "$status" -eq 2 ]; then
+            git checkout -b "$AGENT_BRANCH" origin/main
+          else
+            exit "$status"
+          fi
+          # Published before any agent runs, so their budget reservations can be pushed as fast-forwards.
+          git push origin "HEAD:refs/heads/$AGENT_BRANCH"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
       - run: python -m unittest discover -s tests -v
-      - name: Configure bot identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Update validated daily visual theme
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD || '1000' }}
-          TREND_FEED_URL: ${{ vars.TREND_FEED_URL }}
-        run: python agents/daily_trend_ui_agent.py --persist-reservations
-      - name: Discover reviewed-product candidates
-        env:
-          PRODUCT_DISCOVERY_FEED_URL: ${{ vars.PRODUCT_DISCOVERY_FEED_URL }}
-        run: python agents/product_expander_agent.py
-      - name: Run 1000 workers with durable reservations
-        id: fleet
+      - name: Run the isolated agent pipeline
+        id: pipeline
         continue-on-error: true
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD || '1000' }}
-          FLEET_SHUTDOWN_BUFFER_SECONDS: "120"
+          AGENT_GIT_BRANCH: ${{ env.AGENT_BRANCH }}
+          PRODUCT_DISCOVERY_FEED_URL: ${{ vars.PRODUCT_DISCOVERY_FEED_URL }}
+          TREND_FEED_URL: ${{ vars.TREND_FEED_URL }}
+          AFFILIATE_TAG_AMAZON: ${{ vars.AFFILIATE_TAG_AMAZON }}
+          ALZA_AFFILIATE_PARAM: ${{ vars.ALZA_AFFILIATE_PARAM }}
           INDEXNOW_ENABLED: ${{ vars.INDEXNOW_ENABLED || 'false' }}
           INDEXNOW_HOST: ${{ vars.INDEXNOW_HOST }}
           INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
-        run: python agents/fleet_runner.py --agents 1000 --max-hours 1.5 --persist-reservations
+          DATABASE_URL: file:./dev.db
+        run: python agents/run_isolated.py --max-minutes 60 --llm-review
       - name: Upload recovery evidence
-        if: ${{ always() && steps.fleet.outcome != 'skipped' }}
+        if: ${{ always() && steps.pipeline.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
         with:
           name: fleet-checkpoint-${{ github.run_id }}
@@ -67,105 +94,49 @@ jobs:
             data/agent_state.json
             data/cost_ledger.json
             data/agent_drafts.json
+            BUG_REPORT.md
           if-no-files-found: error
           retention-days: 90
-      - name: Commit checkpoints and reviewed catalogs
-        if: ${{ always() && steps.fleet.outcome != 'skipped' }}
+      - name: Commit agent output to agent-staging
+        id: publish
+        if: ${{ always() && steps.pipeline.outcome != 'skipped' }}
         run: |
-          git add data/agent_state.json data/cost_ledger.json data/agent_drafts.json data/sticker_drops.json
+          set -euo pipefail
+          git add -- BUG_REPORT.md data/agent_state.json data/agent_drafts.json data/cost_ledger.json \
+            data/sticker_drops.json data/supplements.json data/daily_featured.json data/daily_visual_theme.json \
+            data/product_candidate_drafts.json data/qa_session_state.json
           if ! git diff --cached --quiet; then
-            git commit -m "Save fleet checkpoints and drafts [skip ci]"
-            git push origin HEAD:main
+            git commit -m "Daily agent run $GITHUB_RUN_ID"
           fi
-      - name: Upload visual and product draft changes
-        if: ${{ success() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: validated-agent-candidates-${{ github.run_id }}
-          path: |
-            data/daily_visual_theme.json
-            data/product_candidate_drafts.json
-            apps/sticker-market/public/og/daily-theme.svg
-            apps/usa-christmas-supplements/public/og/daily-theme.svg
-          if-no-files-found: error
-          retention-days: 7
+          git push origin "HEAD:refs/heads/$AGENT_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - name: Fail after saving evidence
         if: ${{ always() }}
         env:
-          FLEET_OUTCOME: ${{ steps.fleet.outcome }}
-        run: test "$FLEET_OUTCOME" = success
+          PIPELINE_OUTCOME: ${{ steps.pipeline.outcome }}
+        run: test "$PIPELINE_OUTCOME" = success
 
-  catalog-linker:
-    # Daily rotation is free, so it still runs when the fleet job fails or stops at its budget.
-    needs: fleet
-    if: ${{ !cancelled() && github.event_name != 'push' }}
+  verify:
+    # Checks out exactly the commit the agents pushed, with a read-only token and no secrets.
+    needs: agents
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: write
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements.txt
-      - name: Configure bot identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Rotate daily picks and refresh discovery metadata
-        id: linker
-        continue-on-error: true
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD || '1000' }}
-          AFFILIATE_TAG_AMAZON: ${{ vars.AFFILIATE_TAG_AMAZON }}
-          ALZA_AFFILIATE_PARAM: ${{ vars.ALZA_AFFILIATE_PARAM }}
-        run: python agents/daily_catalog_linker.py --persist-reservations
-      - name: Commit ledger, discovery metadata and daily picks
-        if: ${{ always() && steps.linker.outcome != 'skipped' }}
-        run: |
-          git add data/cost_ledger.json data/supplements.json data/daily_featured.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Rotate daily picks and refresh discovery metadata [skip ci]"
-            git push origin HEAD:main
-          fi
-      - name: Fail after saving the ledger
-        if: ${{ always() }}
-        env:
-          LINKER_OUTCOME: ${{ steps.linker.outcome }}
-        run: test "$LINKER_OUTCOME" = success
-
-  rebuild:
-    needs: [fleet, catalog-linker]
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
+          ref: ${{ needs.agents.outputs.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          name: validated-agent-candidates-${{ github.run_id }}
-          path: .
       - run: npm test
       - run: npm run test:integration -w sticker-market
       - run: npm run test:integration -w usa-christmas-supplements
       - run: npm run test:audit
       - name: Zero-mistakes type, lint, schema, build, SEO and accessibility gate
         id: verify
-        run: npm run verify:zero-mistakes
+        run: node scripts/verify_zero_mistakes.mjs
         env:
           DATABASE_URL: file:./dev.db
       - name: Upload Lighthouse evidence
@@ -176,39 +147,122 @@ jobs:
           path: reports/lighthouse/
           include-hidden-files: true
           if-no-files-found: error
-      - name: Configure bot identity
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Commit validated visual and product drafts
-        run: |
-          git add data/daily_visual_theme.json data/product_candidate_drafts.json apps/sticker-market/public/og/daily-theme.svg apps/usa-christmas-supplements/public/og/daily-theme.svg
-          if ! git diff --cached --quiet; then
-            git commit -m "Update validated daily visual and product drafts [skip ci]"
-            git push origin HEAD:main
-          fi
-      - uses: actions/upload-artifact@v4
-        with:
-          name: site-builds
-          path: |
-            apps/sticker-market/.next/
-            apps/usa-christmas-supplements/.next/
-          include-hidden-files: true
 
-  bug-hunter:
-    # Keeps BUG_REPORT.md current on every push and after the daily fleet jobs. On a schedule it waits for them so their
-    # checkpoint commits land first; skipped (push) or failed fleet jobs never block it.
-    needs: [fleet, catalog-linker, rebuild]
-    if: ${{ !cancelled() }}
+  promote:
+    # Runs only when the agents and every verification gate succeeded.
+    needs: [agents, verify]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     permissions:
       contents: write
+      pull-requests: write
+    env:
+      # Optional AGENT_PR_TOKEN: needed only when branch protection requires checks triggered by the pull request itself.
+      GH_TOKEN: ${{ secrets.AGENT_PR_TOKEN || github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERIFIED_SHA: ${{ needs.agents.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.agents.outputs.sha }}
+          fetch-depth: 0
+      - name: Open the pull request and merge the verified commit
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main "$AGENT_BRANCH"
+          if [ "$(git rev-parse "origin/$AGENT_BRANCH")" != "$VERIFIED_SHA" ]; then
+            echo "::error::$AGENT_BRANCH moved after verification; refusing to promote an unverified commit."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor origin/main "$VERIFIED_SHA"; then
+            echo "::error::main received new commits during this run, so the verified tree is stale. The next run re-verifies and promotes."
+            exit 1
+          fi
+          if git diff --quiet origin/main "$VERIFIED_SHA"; then
+            echo "Nothing to promote: $AGENT_BRANCH matches main." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          number="$(gh pr list --base main --head "$AGENT_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -z "$number" ]; then
+            url="$(gh pr create --base main --head "$AGENT_BRANCH" \
+              --title "Daily agent update $(date -u +%F)" \
+              --body "Automated agent output from run $GITHUB_RUN_ID. Unit tests, integration tests, TypeScript, ESLint, JSON schema validation, production builds and the Lighthouse gates (SEO 97, Accessibility 95) passed on $VERIFIED_SHA.")"
+            number="${url##*/}"
+          fi
+          # --match-head-commit makes GitHub refuse the merge unless the head is still the verified commit.
+          for attempt in 1 2 3; do
+            if gh pr merge "$number" --merge --auto --match-head-commit "$VERIFIED_SHA" \
+              || gh pr merge "$number" --merge --match-head-commit "$VERIFIED_SHA"; then
+              echo "Pull request #$number merges $VERIFIED_SHA into main." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep $((attempt * 10))
+          done
+          echo "::error::Pull request #$number could not be merged; main was left untouched."
+          exit 1
+
+  report-failure:
+    # Any failed gate leaves main untouched and is logged in BUG_REPORT.md on agent-staging.
+    needs: [agents, verify, promote]
+    if: ${{ always() && github.event_name != 'push' && (needs.agents.result != 'success' || needs.verify.result != 'success' || needs.promote.result != 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      AGENTS_RESULT: ${{ needs.agents.result }}
+      PIPELINE_OUTCOME: ${{ needs.agents.outputs.pipeline }}
+      VERIFY_RESULT: ${{ needs.verify.result }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
+      - name: Check out agent-staging
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$AGENT_BRANCH" >/dev/null; then
+            git checkout -B "$AGENT_BRANCH" "origin/$AGENT_BRANCH"
+          else
+            git checkout -b "$AGENT_BRANCH"
+          fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Log the failed gate in BUG_REPORT.md
+        run: |
+          set -euo pipefail
+          if [ "$AGENTS_RESULT" != success ]; then
+            if [ "$PIPELINE_OUTCOME" = failure ]; then
+              echo "agents/run_isolated.py already logged the failing stage."
+              exit 0
+            fi
+            stage=agents
+            detail="The branch sync, dependency install or unit tests failed before any agent ran; main is left untouched."
+          elif [ "$VERIFY_RESULT" != success ]; then
+            stage=verify
+            detail="scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched."
+          else
+            stage=promote
+            detail="The verified commit could not be merged through a pull request; main is left untouched."
+          fi
+          python agents/run_isolated.py --record-failure "$stage" --detail "$detail" --run-url "$RUN_URL"
+          git add -- BUG_REPORT.md data/qa_session_state.json
+          git commit -m "Log failed $stage gate for run $GITHUB_RUN_ID"
+          git push origin "HEAD:refs/heads/$AGENT_BRANCH"
+
+  audit-push:
+    # Free audit of every push to main: no LLM and no commit. The report is published in the run summary and as an artifact.
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -222,24 +276,15 @@ jobs:
       - name: Hunt defects (incremental, SHA-256 based)
         env:
           DATABASE_URL: file:./dev.db
-          # The paid LLM review runs only on the daily/manual run, never on pushes, and is budget-reserved in data/cost_ledger.json.
-          LLM_API_KEY: ${{ github.event_name != 'push' && secrets.LLM_API_KEY || '' }}
-          MONTHLY_BUDGET_USD: ${{ secrets.MONTHLY_BUDGET_USD || '1000' }}
-          BUG_HUNTER_ARGS: ${{ github.event_name != 'push' && '--llm' || '' }}
-        run: python agents/bug_hunter_agent.py $BUG_HUNTER_ARGS
+        run: python agents/bug_hunter_agent.py
       - name: Publish report summary
         if: ${{ always() }}
         run: test -f BUG_REPORT.md && head -c 60000 BUG_REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
-      - name: Commit bug report, QA state and ledger
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add BUG_REPORT.md data/qa_session_state.json data/cost_ledger.json
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Update bug report and QA session state [skip ci]"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main
-            if git push origin HEAD:main; then exit 0; fi
-            sleep $((attempt * 5))
-          done
-          exit 1
+      - name: Upload the report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bug-report-${{ github.sha }}
+          path: BUG_REPORT.md
+          if-no-files-found: warn
+          retention-days: 14

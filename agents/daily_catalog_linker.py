@@ -32,12 +32,12 @@ from uuid import uuid4
 
 import aiohttp
 from dotenv import load_dotenv
-from filelock import FileLock
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from agents import safe_io  # noqa: E402
 from agents.fleet_runner import (  # noqa: E402
     INPUT_RATE,
     MODEL,
@@ -48,6 +48,7 @@ from agents.fleet_runner import (  # noqa: E402
     budget_limit,
     daily_allocations,
     load_json,
+    push_staging,
     read_ledger,
     settle,
 )
@@ -322,6 +323,11 @@ def load_catalog(path: Path) -> tuple[list, dict[str, tuple[dict, CatalogProduct
 def reserve_batches(root: Path, count: int, limit: Decimal, now: datetime, seconds: int) -> list[str]:
     """Reserves the full bounded cost of as many batches as stay strictly under the monthly cap."""
     path = root / "data" / "cost_ledger.json"
+    with safe_io.file_lock(path):
+        return reserve_batches_locked(path, count, limit, now, seconds)
+
+
+def reserve_batches_locked(path: Path, count: int, limit: Decimal, now: datetime, seconds: int) -> list[str]:
     ledger = read_ledger(path)
     months = sorted({day[:7] for day in daily_allocations(now, seconds)})
     affordable = count
@@ -349,15 +355,7 @@ def reserve_batches(root: Path, count: int, limit: Decimal, now: datetime, secon
 
 
 def persist_ledger(root: Path, deadline: float) -> None:
-    for command in (
-        ["git", "add", "--", "data/cost_ledger.json"],
-        ["git", "commit", "-m", "Reserve catalog linker budget [skip ci]"],
-        ["git", "push", "origin", "HEAD:main"],
-    ):
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            raise FleetError("Runtime expired before the reservation could be persisted.")
-        subprocess.run(command, cwd=root, check=True, timeout=min(60, remaining))
+    push_staging(root, ["data/cost_ledger.json"], "Reserve catalog linker budget", deadline)
 
 
 def build_messages(batch: list[CatalogProduct], preferred: list[str]) -> list[dict]:
@@ -434,14 +432,15 @@ async def run_linker(root: Path, *, day: str, now: datetime, limit: Decimal, sec
     tag, alza = affiliate_settings(amazon_tag, alza_param)
     catalog_path = catalog_path or root / "data" / CATALOG_NAME
     featured_path = catalog_path.parent / FEATURED_NAME
-    with FileLock(str(root / "data" / "fleet.lock"), timeout=10):
+    with safe_io.file_lock(root / "data" / "fleet", timeout=10):
         catalog, eligible = load_catalog(catalog_path)
         original = copy.deepcopy(catalog)
         sources = {pid: current_source(raw, product) for pid, (raw, product) in eligible.items()}
         pending = [product for pid, (_, product) in eligible.items()
                    if sources[pid] != "manual" and (refresh or sources[pid] != "llm")]
         enriched: dict[str, Enrichment] = {}
-        api_key = os.getenv("LLM_API_KEY", "").strip()
+        simulate = safe_io.dry_run()
+        api_key = "" if simulate else os.getenv("LLM_API_KEY", "").strip()
         if pending and api_key:
             batches = [pending[index:index + BATCH_SIZE] for index in range(0, len(pending), BATCH_SIZE)]
             reservations = reserve_batches(root, len(batches), limit, now, seconds)
@@ -450,7 +449,7 @@ async def run_linker(root: Path, *, day: str, now: datetime, limit: Decimal, sec
                     persist_ledger(root, deadline)
                 enriched = await enrich_with_llm(root, batches, reservations, api_key, preferred_tags(eligible), deadline)
         elif pending:
-            LOG.info("LLM_API_KEY is not set; using rule-based discovery metadata.")
+            LOG.info("%s; using rule-based discovery metadata.", "Dry run" if simulate else "LLM_API_KEY is not set")
 
         counts = {"llm": 0, "rules": 0, "unchanged": 0}
         for pid, (raw, product) in eligible.items():
@@ -467,7 +466,11 @@ async def run_linker(root: Path, *, day: str, now: datetime, limit: Decimal, sec
                 raw["discovery_meta"] = {"source": source, "content_hash": content_hash(product), "updated_at": day}
             raw["store_links"] = build_store_links(product, tag, alza).model_dump()
         if catalog != original:
-            atomic_write(catalog_path, catalog)
+            with safe_io.file_lock(catalog_path):
+                # Model requests can take minutes; a catalog edited meanwhile (review, ingest) must not be overwritten.
+                if load_json(catalog_path) != original:
+                    raise FleetError("The supplement catalog changed during this run; nothing was written. Run the linker again.")
+                atomic_write(catalog_path, catalog)
 
         in_stock = {pid: raw["search_keywords"] for pid, (raw, product) in eligible.items() if product.in_stock}
         clicks = {pid: total for pid, total in recent_clicks(click_log, now).items() if pid in in_stock}
@@ -504,13 +507,14 @@ def main() -> int:
     try:
         if not 1 <= args.max_seconds <= MAX_RUNTIME_SECONDS:
             raise FleetError(f"Runtime must be between 1 and {MAX_RUNTIME_SECONDS} seconds.")
-        if os.getenv("GITHUB_ACTIONS") == "true" and not args.persist_reservations:
+        simulate = safe_io.dry_run()
+        if os.getenv("GITHUB_ACTIONS") == "true" and not args.persist_reservations and not simulate:
             raise FleetError("Actions runs require --persist-reservations.")
         now = datetime.now(timezone.utc)
         day = date.fromisoformat(args.date).isoformat() if args.date else now.strftime("%Y-%m-%d")
         summary = asyncio.run(run_linker(
             ROOT, day=day, now=now, limit=budget_limit(os.getenv("MONTHLY_BUDGET_USD", "1000")),
-            seconds=args.max_seconds, refresh=args.refresh, remote=args.persist_reservations,
+            seconds=args.max_seconds, refresh=args.refresh, remote=args.persist_reservations and not simulate,
             amazon_tag=os.getenv("AFFILIATE_TAG_AMAZON", ""), alza_param=os.getenv("ALZA_AFFILIATE_PARAM", ""),
             catalog_path=env_path("SUPPLEMENT_CATALOG_PATH"),
             click_log=env_path("AFFILIATE_CLICK_LOG") or ROOT / "data" / "affiliate_clicks.jsonl"))
