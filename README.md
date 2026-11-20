@@ -389,7 +389,10 @@ output. To
 keep dashboard content off hosted model services, configure a local
 OpenAI-compatible model with `BROWSER_KEY_COLLECTOR_BASE_URL` (defaults to
 `http://127.0.0.1:1234/v1`) and `BROWSER_KEY_COLLECTOR_MODEL` (defaults to
-`local-model`). The script rejects non-loopback model URLs. Complete any login
+`local-model`). Start the local model server and load a model before running the
+script; installing `browser-use` alone does not provide a model server. The
+model must support browser-use's structured output and tool calls. The script
+rejects non-loopback model URLs. Complete any login
 or 2FA prompts in Chrome when asked; extracted values are not printed.
 
 ## Daily visual themes and verification

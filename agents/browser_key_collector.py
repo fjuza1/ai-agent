@@ -10,6 +10,7 @@ import logging
 import os
 from pathlib import Path
 import re
+import socket
 import sys
 import tempfile
 from typing import Iterator
@@ -113,7 +114,7 @@ def quiet_agent_output() -> Iterator[None]:
         logging.disable(previous_disable)
 
 
-def local_model(base_url: str | None = None, model_name: str | None = None) -> ChatOpenAI:
+def local_model_endpoint(base_url: str | None = None) -> str:
     endpoint = base_url or os.environ.get(
         "BROWSER_KEY_COLLECTOR_BASE_URL", "http://127.0.0.1:1234/v1"
     )
@@ -127,6 +128,28 @@ def local_model(base_url: str | None = None, model_name: str | None = None) -> C
         or parsed.fragment
     ):
         raise ValueError("The model endpoint must be a loopback URL so dashboard content stays local.")
+    return endpoint
+
+
+def check_local_model(endpoint: str) -> None:
+    parsed = urlsplit(endpoint)
+    try:
+        with socket.create_connection(
+            (parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80)),
+            timeout=3,
+        ):
+            pass
+    except OSError:
+        raise RuntimeError(
+            "The local model endpoint is unreachable. Start an OpenAI-compatible local "
+            "model server, load a model, and configure BROWSER_KEY_COLLECTOR_BASE_URL "
+            "and BROWSER_KEY_COLLECTOR_MODEL as needed. The default endpoint is "
+            "http://127.0.0.1:1234/v1."
+        ) from None
+
+
+def local_model(base_url: str | None = None, model_name: str | None = None) -> ChatOpenAI:
+    endpoint = local_model_endpoint(base_url)
     model = model_name or os.environ.get("BROWSER_KEY_COLLECTOR_MODEL", "local-model")
     api_key = os.environ.get("BROWSER_KEY_COLLECTOR_LOCAL_LLM_API_KEY", "local")
     return ChatOpenAI(model=model, base_url=endpoint, api_key=api_key, temperature=0)
@@ -244,8 +267,17 @@ async def inspect_dashboard(
 
         result = history.structured_output
         if not isinstance(result, PublicConfiguration):
+            status = history.status
+            if status in ("error", "timeout", "max_steps"):
+                raise RuntimeError(
+                    f"The {dashboard.name} inspection ended with status {status}. "
+                    "Check that the local model server has a compatible model loaded "
+                    "and that Chrome can reach the dashboard. Diagnostic details were "
+                    "suppressed because they may contain private dashboard data."
+                )
             raise RuntimeError(
-                f"The {dashboard.name} dashboard returned no validated structured result."
+                f"The {dashboard.name} inspection returned no validated structured result. "
+                "Check that the local model supports browser-use structured output."
             )
         if result.manual_verification_needed:
             if attempt == MAX_MANUAL_ROUNDS:
@@ -260,7 +292,9 @@ async def inspect_dashboard(
 
 
 async def collect() -> tuple[dict[str, str], list[str]]:
-    llm = local_model()
+    endpoint = local_model_endpoint()
+    check_local_model(endpoint)
+    llm = local_model(endpoint)
     collected: dict[str, str] = {}
     rejected: list[str] = []
     for dashboard in DASHBOARDS:

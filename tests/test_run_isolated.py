@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -18,6 +19,7 @@ class RunIsolatedTests(unittest.TestCase):
         self.ledger.write_text('{"version": 1, "months": {}}\n', encoding="utf-8")
         self.calls = []
         self.exit_codes = {}
+        self.dry_run_inputs = {}
         patcher = patch.object(run_isolated, "ROOT", self.root)
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -25,6 +27,10 @@ class RunIsolatedTests(unittest.TestCase):
     def runner(self, command, cwd, env, timeout):
         script = Path(command[1]).name
         self.calls.append(SimpleNamespace(script=script, args=command[2:], env=env))
+        if env.get(safe_io.DRY_RUN_ENV) == "1" and not self.dry_run_inputs:
+            for name in ("cost_ledger.json", "agent_state.json"):
+                shadow = safe_io.resolve_read(self.root / "data" / name)
+                self.dry_run_inputs[name] = shadow.read_text(encoding="utf-8")
         # Every stage writes through safe_io, exactly as the real agents do.
         safe_io.atomic_write_json(self.ledger, {"version": 1, "months": {}, "written_by": script})
         return SimpleNamespace(returncode=self.exit_codes.get(script, 0))
@@ -69,6 +75,31 @@ class RunIsolatedTests(unittest.TestCase):
         self.assertEqual(self.ledger.read_bytes(), before)
         self.assertEqual([path.name for path in (self.root / "data").iterdir()], ["cost_ledger.json"])
         self.assertNotIn(safe_io.DRY_RUN_ENV, os.environ)
+        record.assert_not_called()
+
+    def test_dry_run_uses_fresh_budget_shadows_without_resetting_live_state(self):
+        state = self.root / "data" / "agent_state.json"
+        state.write_text(
+            '{"version": 1, "runs": [{"id": "existing", "day": "2026-11-20", '
+            '"allocated_seconds": 7200, "allocations": {"2026-11-20": 7200}}]}\n',
+            encoding="utf-8",
+        )
+        before_ledger = self.ledger.read_bytes()
+        before_state = state.read_bytes()
+
+        code, record = self.main("--dry-run")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            json.loads(self.dry_run_inputs["cost_ledger.json"]),
+            {"version": 1, "months": {}},
+        )
+        self.assertEqual(
+            json.loads(self.dry_run_inputs["agent_state.json"]),
+            {"version": 1, "runs": []},
+        )
+        self.assertEqual(self.ledger.read_bytes(), before_ledger)
+        self.assertEqual(state.read_bytes(), before_state)
         record.assert_not_called()
 
     def test_time_limit_shortens_the_fleet_and_skips_it_when_nothing_is_left(self):

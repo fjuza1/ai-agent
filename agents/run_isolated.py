@@ -190,6 +190,9 @@ def execute(args: argparse.Namespace) -> int:
         os.environ[safe_io.DRY_RUN_ENV] = "1"
         os.environ[safe_io.DRY_RUN_DIR_ENV] = str(scratch)
         before = snapshot(ROOT)
+        # A simulation must not be blocked by live spending or runtime reservations.
+        safe_io.atomic_write_json(ROOT / "data" / "cost_ledger.json", {"version": 1, "months": {}})
+        safe_io.atomic_write_json(ROOT / "data" / "agent_state.json", {"version": 1, "runs": []})
         LOG.info("Dry run: writes go to %s; data/ and BUG_REPORT.md will not be modified.", scratch)
     try:
         try:
