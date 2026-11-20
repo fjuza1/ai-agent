@@ -384,7 +384,8 @@ serving ads, especially in the EEA, UK, Switzerland, and US states.
 
 `python agents/browser_key_collector.py` attaches to an open Chrome session and
 can save allowlisted public identifiers and a verified SendGrid sender to the
-ignored `.env.local` file. It does not collect API keys or other secrets. To
+ignored `.env.local` file; API keys and other secrets are excluded from its
+output. To
 keep dashboard content off hosted model services, configure a local
 OpenAI-compatible model with `BROWSER_KEY_COLLECTOR_BASE_URL` (defaults to
 `http://127.0.0.1:1234/v1`) and `BROWSER_KEY_COLLECTOR_MODEL` (defaults to
