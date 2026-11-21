@@ -1031,5 +1031,12 @@
     }
   ],
   "content_fingerprint": "8fc4c490b98f0d49dd660558ec475e1d339efaf75b13837568050bb6120f4918",
-  "pipeline_failures": []
+  "pipeline_failures": [
+    {
+      "at": "2026-11-21T02:13:56Z",
+      "stage": "verify",
+      "detail": "scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched.",
+      "run_url": "https://github.com/fjuza1/ai-agent/actions/runs/44854534059"
+    }
+  ]
 }

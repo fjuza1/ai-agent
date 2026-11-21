@@ -86,5 +86,9 @@ _None._
 <!-- pipeline-gates:begin -->
 ## Pipeline gate failures
 
-_None recorded._
+_Each run below stopped before promotion: `main` was left untouched and the agent output stayed on the staging branch._
+
+| When (UTC) | Stage | Detail | Run |
+|---|---|---|---|
+| 2026-11-21T02:13:56Z | `verify` | scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched. | [log](https://github.com/fjuza1/ai-agent/actions/runs/44854534059) |
 <!-- pipeline-gates:end -->
