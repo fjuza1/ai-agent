@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-11-22T02:13:22Z",
+  "updated_at": "2026-11-23T02:15:04Z",
   "active": {
     "name": "Cozy Nordic Holiday",
     "bg_primary": "#F8F5EF",
@@ -123,7 +123,7 @@
   "trend": {
     "signal_status": "feed_unavailable",
     "provider": "curated-preset",
-    "observed_at": "2026-11-22T02:13:22Z",
+    "observed_at": "2026-11-23T02:15:04Z",
     "summary": "No configured public trend feed; applied the highest-scoring validated preset.",
     "sources": [],
     "observations": []
