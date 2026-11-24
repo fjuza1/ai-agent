@@ -52,6 +52,18 @@
       "completed": [],
       "failed": [],
       "finished_at": "2026-11-23T02:15:06.292624+00:00"
+    },
+    {
+      "id": "4731ae20-249d-4c7c-96b6-52deeb6e96b9",
+      "day": "2026-11-24",
+      "started_at": "2026-11-24T02:13:39.948415+00:00",
+      "allocated_seconds": 2519,
+      "allocations": {
+        "2026-11-24": 2519
+      },
+      "status": "reserved",
+      "completed": [],
+      "failed": []
     }
   ]
 }
