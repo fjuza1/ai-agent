@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "session_id": "fc86b740-1e43-4fae-9f2a-3bf0ef50b579",
-  "session_count": 9,
-  "last_run_timestamp": "2026-11-26T02:13:26Z",
+  "session_id": "82a286b6-9c18-4c4d-9a70-f5a9a6a383e5",
+  "session_count": 10,
+  "last_run_timestamp": "2026-11-27T02:13:26Z",
   "scanned_file_hashes": {
     ".github/workflows/daily-agent-fleet.yml": "8f346dc15d9915b585a2120eb4a24204ac20c4965d4d797625ce70f4a513ab5c",
     ".github/workflows/send-product-alerts.yml": "57167f0d28e1a83712f8812662518b491ee5de305a7948223c2a09bf489b3b7a",
@@ -143,10 +143,10 @@
     "apps/usa-christmas-supplements/tsconfig.json": "2c34b7760b6f585b2a71d1945fac0d65b228c236065b4917bedfa4c7def9fb1c",
     "data/agent_drafts.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
     "data/agent_queue.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-    "data/agent_state.json": "a231c8cebac6a88b8baabcd1005f1d1c16934903115b63c3ac5e7d8b7dd9c304",
+    "data/agent_state.json": "09f3fe90659400e14f5ac16299b1adc0b3b3c0b97da0f99f5d0586496d8cb102",
     "data/cost_ledger.json": "ed508779b1ed45516362e6684e4fbed33cbd6d4847566823aaeba0eecb9de759",
-    "data/daily_featured.json": "04779e81bb0c310de6c19e9714eec7958fab68c24183032dc7c99315cc49b359",
-    "data/daily_visual_theme.json": "0a26a0039241b29cc675dfcc75b61d5e5f5478eee68efe17f90318b789f70625",
+    "data/daily_featured.json": "d22fc0b1a77c35cbc70cd69be744a45ae603d1ed04d63c1c3e66b0e65fead555",
+    "data/daily_visual_theme.json": "8e67890114ba50158a19f1557e94f1cb9d3f0dcc091b4c49cad752f50e56f78d",
     "data/legacy_stickers_catalog.json": "bccb440984d8867035106cfa8ba8011f278d9f950a491477bd0a612f10095d66",
     "data/product_candidate_drafts.json": "df04acd600c74a544efca444d7ea412e9370d4d01312d1cc47973cc59601201c",
     "data/sticker_drops.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
@@ -191,7 +191,7 @@
     "tsc": {
       "status": "FAIL",
       "detail": "3 project(s), 2 error(s)",
-      "timestamp": "2026-11-26T02:13:26Z"
+      "timestamp": "2026-11-27T02:13:26Z"
     },
     "prisma": {
       "status": "PASS",
@@ -275,7 +275,7 @@
       "status": "OPEN",
       "first_seen": "2026-11-21T02:12:56Z",
       "first_session": "487315bc-f01e-45a8-895e-2bb09eaa376d",
-      "last_seen": "2026-11-26T02:13:26Z"
+      "last_seen": "2026-11-27T02:13:26Z"
     },
     {
       "rule": "BUILD-UNRESOLVED-IMPORT",
@@ -309,7 +309,7 @@
       "status": "OPEN",
       "first_seen": "2026-11-21T02:12:56Z",
       "first_session": "487315bc-f01e-45a8-895e-2bb09eaa376d",
-      "last_seen": "2026-11-26T02:13:26Z"
+      "last_seen": "2026-11-27T02:13:26Z"
     },
     {
       "rule": "BUILD-UNRESOLVED-IMPORT",
@@ -1030,7 +1030,7 @@
       "resolved_session": "b92dddf0-3e2b-4128-b1d1-674263c0706b"
     }
   ],
-  "content_fingerprint": "7ae394073b35bc98fa6fc7b1ec5e271ca71899f2c7de660ebcab2184c310964f",
+  "content_fingerprint": "ca666aabe4b710ce4542e7cabdce9eac873b406356ae92fc0a7763b1b3c17eb7",
   "pipeline_failures": [
     {
       "at": "2026-11-26T02:14:22Z",
