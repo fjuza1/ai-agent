@@ -90,6 +90,7 @@ _Each run below stopped before promotion: `main` was left untouched and the agen
 
 | When (UTC) | Stage | Detail | Run |
 |---|---|---|---|
+| 2026-11-28T02:13:27Z | `verify` | scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched. | [log](https://github.com/fjuza1/ai-agent/actions/runs/46096876403) |
 | 2026-11-27T02:14:27Z | `verify` | scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched. | [log](https://github.com/fjuza1/ai-agent/actions/runs/45926974325) |
 | 2026-11-26T02:14:22Z | `verify` | scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched. | [log](https://github.com/fjuza1/ai-agent/actions/runs/45740869798) |
 | 2026-11-25T02:14:35Z | `verify` | scripts/verify_zero_mistakes.mjs or a pre-merge test failed; no pull request was opened and main is left untouched. | [log](https://github.com/fjuza1/ai-agent/actions/runs/45531316817) |
