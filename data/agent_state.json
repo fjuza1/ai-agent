@@ -113,9 +113,10 @@
       "allocations": {
         "2026-11-28": 2519
       },
-      "status": "reserved",
+      "status": "completed",
       "completed": [],
-      "failed": []
+      "failed": [],
+      "finished_at": "2026-11-28T02:12:33.307657+00:00"
     }
   ]
 }
